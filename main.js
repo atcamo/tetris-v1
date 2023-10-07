@@ -43,7 +43,7 @@ const board = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1],
 ]
 
 
@@ -51,14 +51,30 @@ const board = [
 const piece = {
   position: { x: 5, y: 5 },
   shape: [
-    [1, 1],
-    [1, 1]
-  ]
+          [1, 1],
+          [1, 1]
+        ]
 }
 
 
 //2. game loop
-function update ()  {
+let dropCounter = 0
+let lastTime = 0
+
+
+function update (time= 0)  {
+  const deltaTime = time - lastTime
+  lastTime = time
+
+  dropCounter+= deltaTime
+
+  if (dropCounter > 1000) {
+    piece.position.y++ 
+    dropCounter = 0
+  }
+
+
+
   draw();
   window.requestAnimationFrame(update)
 }
@@ -105,6 +121,8 @@ document.addEventListener('keydown', event => {
     piece.position.y++
     if (checkCollision()){
       piece.position.y--
+      solidifyPieces()
+      removeRows()
     }
   }
 })
@@ -120,8 +138,39 @@ function checkCollision (){
   })
 }
 
+function solidifyPieces () {
+  piece.shape.forEach((row,x) => {
+    row.forEach((value, y) => {
+      if(value===1) {
+        board[y + piece.position.y] [x+piece.position.x]= 1
+      }
+    })
+    
+  })
+
+  piece.position.x= 0
+  piece.position.y= 0
+}
+
+function removeRows() {
+  const rowsToRemove = []
+
+  board.forEach((row, y) =>{
+    if (row.every(value => value === 1)) {
+      rowsToRemove.push(y)
+    }
+  })
+
+  rowsToRemove.forEach(y => {
+    board.splice(y, 1)
+    const newRow = Array(BOARD_WIDTH).fill(0)
+    board.unshift(newRow)
+  })
+}
+
+
 
 update ()
 
 
-//3. 
+
