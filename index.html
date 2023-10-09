@@ -4,12 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="" href="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css">
     <title>Tetris v1</title>
   </head>
   <body>
-    <div id="app">
+    <main id="app">
       <canvas></canvas>
-    </div>
+    
+      <aside id="scorePanel">
+        <section>
+          <h1>Puntuación actual:</h1>
+          <p><span></span></p>
+        </section>
+        
+        <section id="highScoresList">
+          <h2>Historial de puntuaciones:</h2>
+        </section>
+      </aside>
+    </main>  
     <script type="module" src="/main.js"></script>
   </body>
 </html>
