@@ -10,6 +10,7 @@ const BOARD_WIDTH = 14; //ancho contenedor
 const BOARD_HEIGHT = 30; //alto de contenedor
 
 let score = 0
+let dropTimeBase = 1000;
 
 canvas.width = BLOCK_SIZE * BOARD_WIDTH;
 canvas.height = BLOCK_SIZE * BOARD_HEIGHT;
@@ -48,13 +49,20 @@ const PIECES = [
     [1,1,0]
   ],
   [
+    [1,1,0],
+    [0,1,1]
+  ],
+  [
     [1,0],
     [1,0],
     [1,1]
+  ],
+  [
+    [0,1],
+    [0,1],
+    [1,1]
   ]
 ]
-
-
 
 //2. game loop
 let dropCounter = 0
@@ -67,21 +75,25 @@ function update (time= 0)  {
 
   dropCounter+= deltaTime
 
-  if (dropCounter > 1000) {
+  // Ajusta el tiempo de caída basado en el score
+  let dropTime = dropTimeBase - Math.floor(score / 10) * 50;
+  dropTime = Math.max(dropTime, 100); // Establece un límite mínimo para dropTime
+
+  if (dropCounter > dropTime) {
     piece.position.y++ 
     dropCounter = 0
-  
 
-  if (checkCollision()) {
-    piece.position.y--
-    solidifyPieces()
-    removeRows()
+    if (checkCollision()) {
+      piece.position.y--
+      solidifyPieces()
+      removeRows()
     }
   }
 
   draw();
   window.requestAnimationFrame(update)
 }
+
 
 
 function draw ()  {
@@ -110,49 +122,57 @@ function draw ()  {
 
 }
 
+// 1. Extracción de funciones
+
+function moveLeft() {
+  piece.position.x--;
+  if (checkCollision()) {
+      piece.position.x++;
+  }
+}
+
+function moveRight() {
+  piece.position.x++;
+  if (checkCollision()) {
+      piece.position.x--;
+  }
+}
+
+function moveDown() {
+  piece.position.y++;
+  if (checkCollision()) {
+      piece.position.y--;
+      solidifyPieces();
+      removeRows();
+  }
+}
+
+function rotatePiece() {
+  const rotated = piece.shape[0].map((_, index) => piece.shape.map(row => row[index])).reverse();
+  const prevShape = piece.shape;
+  piece.shape = rotated;
+  if (checkCollision()) {
+      piece.shape = prevShape;
+  }
+}
+
+// 2. Mapeo de acciones
+
+const ACTIONS = {
+  'ArrowLeft': moveLeft,
+  'ArrowRight': moveRight,
+  'ArrowDown': moveDown,
+  'ArrowUp': rotatePiece
+};
+
 document.addEventListener('keydown', event => {
-  if (event.key === 'ArrowLeft') { 
-    piece.position.x--
-    if (checkCollision()){
-      piece.position.x++
-    }
-  }
-  if (event.key === 'ArrowRight') { 
-    piece.position.x++
-    if (checkCollision()){
-      piece.position.x--
-    }
-  }
-  
-  if (event.key === 'ArrowDown') { 
-    piece.position.y++
-    if (checkCollision()){
-      piece.position.y--
-      solidifyPieces()
-      removeRows()
-    }
-  }
-  
-  if (event.key ==='ArrowUp') {
-    const rotated =  []
-    for (let i = 0; i < piece.shape[0].length; i++) {
-      const row = []
+  event.preventDefault();
 
-      for (let j = piece.shape.length - 1; j >= 0; j--) {
-        row.push(piece.shape[j][i])
-      }
-
-      rotated.push(row)
-    }
-
-    //evita rotar si no sale del board
-    const previusShape = piece.shape
-    piece.shape = rotated
-    if (checkCollision()) {
-      piece.shape = previusShape
-    }
+  const action = ACTIONS[event.key];
+  if (action) {
+      action();
   }
-})
+});
 
 function checkCollision () {
   return piece.shape.find((row, y) => {
@@ -181,14 +201,9 @@ function solidifyPieces () {
   piece.position.y= 0
 
   //get random piece
-  //piece.position.x = Math.floor(Math.random() * BOARD_WIDTH)
+
   piece.position.y= 0 
   piece.shape = PIECES[Math.floor(Math.random() * PIECES.length)]
-
-  // if (checkCollision()) { 
-  //   window.alert('Game Over!!')
-  //   board.forEach((row) => row.fill(0)) 
-  // }
 
   if (checkCollision()) {
     gameOver();
@@ -197,21 +212,44 @@ function solidifyPieces () {
 }
 
 function removeRows() {
-  const rowsToRemove = []
+  const rowsToRemove = [];
 
-  board.forEach((row, y) =>{
+  board.forEach((row, y) => {
     if (row.every(value => value === 1)) {
-      rowsToRemove.push(y)
+      rowsToRemove.push(y);
     }
-  })
+  });
 
   rowsToRemove.forEach(y => {
-    board.splice(y, 1)
-    const newRow = Array(BOARD_WIDTH).fill(0)
-    board.unshift(newRow)
-    score += 10
-  })
+    // Antes de eliminar la fila, añadimos el efecto
+    addBreakingEffect(y);
+
+    board.splice(y, 1);
+    const newRow = Array(BOARD_WIDTH).fill(0);
+    board.unshift(newRow);
+    score += 10;
+  });
 }
+
+function addBreakingEffect(row) {
+  const canvasRect = canvas.getBoundingClientRect();
+
+  for (let x = 0; x < BOARD_WIDTH; x++) {
+    const cube = document.createElement("div");
+    cube.classList.add("cube");
+    cube.style.left = `${canvasRect.left + x * BLOCK_SIZE}px`;  // Usamos canvasRect.left para ajustar la posición x
+    cube.style.top = `${canvasRect.top + row * BLOCK_SIZE}px`;   // Usamos canvasRect.top para ajustar la posición y
+    cube.style.background = "yellow";
+    cube.style.animationDelay = `${Math.random() * 0.5}s`;
+    document.body.appendChild(cube);
+    
+    setTimeout(() => {
+      document.body.removeChild(cube);
+    }, 1000);
+  }
+}
+
+
 
 function gameOver() {
   const userName = prompt("Game Over!!\nPor favor ingresa tu nombre:", "Jugador");
@@ -232,17 +270,6 @@ function gameOver() {
   score = 0;
 }
 
-// function showHighScores() {
-//   const highScores = JSON.parse(localStorage.getItem("highScores")) || [];
-  
-//   let scoreList = "";
-//   highScores.forEach(entry => {
-//       scoreList += `${entry.name}: ${entry.score}\n`;
-//   });
-
-//   alert("Historial de Scores:\n\n" + scoreList);
-//}
-
 function showHighScores() {
   const highScores = JSON.parse(localStorage.getItem("highScores")) || [];
   
@@ -256,10 +283,6 @@ function showHighScores() {
 
   highScoresDiv.innerHTML = scoreList;
 }
-
-
-
-
 
 update ()
 
